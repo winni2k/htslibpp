@@ -1,6 +1,6 @@
 htslibpp
 =======
-C++ wrapper for the htslib C library
+C++ wrapper for the [htslib](https://github.com/samtools/htslib) C library
 
 This code is still very much in alpha.  Help greatly appreciated.
 
