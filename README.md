@@ -1,9 +1,20 @@
-# htslibpp
+htslibpp
+=======
+C++ wrapper for the htslib C library
 
-This is a collection of wrapper classes for many dynamically allocated
-htslib structs.  Currently, the classes only come with an assortment
-of constructors, a destructor and the data() accessor to get at 
-the pointer that is being wrapped.
+This code is still very much in alpha.  Help greatly appreciated.
+
+The goal of this library is to provide wrappers for dynamically
+allocated htslib structs, and an object oriented interface for
+interacting with htslib.
+
+## Wrapping htslib structs
+
+htslibpp contains a collection of wrapper classes for many dynamically
+allocated [htslib](https://github.com/samtools/htslib) structs.
+Currently, the classes only come with an assortment of constructors, a
+destructor and the data() accessor to get at the pointer that is being
+wrapped. 
 
 The three constructors (new, copy, wrapper) allow the creation of a wrapper
 object that:
@@ -19,22 +30,31 @@ data() can be used to get a hold of the wrapped pointer in order to call a
 function on it.  For example:
 
     // new constructor
-    bcf_hdr myHeader("w");
+    bcf_hdr myHeader1("w");
     
-    // use the data() method to work on the wrapped header record
-    bcf_hdr_append(myHeader.data(), "##fileformat=VCFv4.1");
+    // use the data() method to add a line to the wrapped header
+    // record using an htslib function
+    bcf_hdr_set_version(myHeader1.data(), "VCFv4.1");
     
     // copy constructor
     // the bcf duplicate function is called by the copy constructor
-    bcf_hdr myHeader2(*(myHeader.data()));
+    bcf_hdr myHeader2(*(myHeader1.data()));
     
+    assert(myHeader2.data() != myHeader1.data());
+
     // wrapper constructor using the move operator
-    // myHeader2 and myHeader3 refer to the same struct
+    // hdr and myHeader3 refer to the same struct
     // this is not a move in the way c++11 thinks of it.
     // However, using move allows the constructor to know
     // not to duplicate the bcf_hrd_t record.
-    bcf_hdr myHeader3(std::move(*(myHeader.data())));
+    bcf_hdr_t *hdr = bcf_hdr_dup(myHeader1.data());
+    bcf_hdr myHeader3(std::move(*(hdr)));
 
-    assert(myHeader3.data() == myHeader2.date());
-    assert(myHeader2.data() != myHeader1.data());
+    assert(myHeader3.data() == hdr);
     
+
+
+
+
+
+

@@ -5,7 +5,13 @@
 ## Keywords: 
 ## X-URL: 
 
-CXXFLAGS += -std=c++11
+CXXFLAGS += -std=c++11 -I.
+DEPS = bcf.hpp hts.hpp
+LIBS = -lhts
+
+SOURCES=$(wildcard *.cpp)
+OBJECTS=$(SOURCES:.cpp=.o)
+HEADERS=$(wildcard: *.hpp)
 
 all: libhtspp.a
 clean:
@@ -14,7 +20,20 @@ debug: CXXFLAGS += -g -O0
 debug: all
 
 %.o: %.cpp %.hpp
-libhtspp.a: bcf.o
-	ar -rv $@ $^
+libhtspp.a: $(OBJECTS)
+	$(AR) -rv $@ $^
 
+.PHONY: all clean debug test
+
+
+### testing
+
+TDIR:= test
+test: CXXFLAGS += -g -O0
+test: $(TDIR)/test_simple
+	./$<
+
+
+$(TDIR)/test_simple: $(TDIR)/test_simple.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LIBS)
 
