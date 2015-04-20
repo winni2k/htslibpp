@@ -6,7 +6,7 @@
 ## X-URL: 
 
 CXXFLAGS += -std=c++11 -I.
-DEPS = bcf.hpp hts.hpp
+DEPS = vcf.hpp hts.hpp
 LIBS = -lhts
 
 SOURCES=$(wildcard *.cpp)
