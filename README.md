@@ -46,7 +46,7 @@ function on it.  For example:
     // hdr and myHeader3 refer to the same struct
     // this is not a move in the way c++11 thinks of it.
     // However, using move allows the constructor to know
-    // not to duplicate the bcf_hrd_t record.
+    // not to duplicate the bcf_hdr_t record.
     bcf_hdr_t *hdr = bcf_hdr_dup(myHeader1.data());
     bcf_hdr myHeader3(std::move(*(hdr)));
 
