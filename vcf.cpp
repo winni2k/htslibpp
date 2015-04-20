@@ -1,4 +1,4 @@
-#include "bcf.hpp"
+#include "vcf.hpp"
 
 using namespace std;
 
