@@ -1,7 +1,7 @@
 #include <cassert>
 #include <string>
 #include <htslib/vcf.h>
-#include "vcf.hpp"
+#include "htslibpp/vcf.hpp"
 
 using namespace std;
 

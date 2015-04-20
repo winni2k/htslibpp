@@ -1,4 +1,4 @@
-#include "vcf.hpp"
+#include "htslibpp/vcf.hpp"
 
 using namespace std;
 
