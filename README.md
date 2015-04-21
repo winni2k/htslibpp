@@ -53,7 +53,9 @@ function on it.  For example:
     assert(myHeader3.data() == hdr);
     
 
+## Future goals
 
+The point of this library shall be to deliver data processing at the speed of htslib with the convenience of the [htsJDK](https://github.com/samtools/htsjdk).
 
 
 
