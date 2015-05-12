@@ -1,4 +1,4 @@
-/* @(#)bcf.hpp
+/* @(#)vcf.hpp
  */
 
 #ifndef _BCF_HPP
@@ -33,9 +33,18 @@ public:
   const bcf_hdr_t *cdata() const { return m_bcf_hdr; }
 };
 
-class bcf1 {
+/*
+ UNIQUE == TRUE means that bcf1 will clean up after itself
+ UNIQUE == FALSE means that bcf1 will simply work on a pointer
+ but no destruction of the bcf1_t when the object goes out of scope
+*/
+template <bool UNIQUE> class bcf1 {
 protected:
   bcf1_t *m_bcf1 = nullptr;
+  void dealloc() {
+    if (UNIQUE == true && m_bcf1)
+      bcf_destroy(m_bcf1);
+  }
 
 public:
   bcf1() { m_bcf1 = bcf_init(); }
@@ -43,53 +52,121 @@ public:
   // duplication may modify the original record
   bcf1(bcf1_t &toDup) { m_bcf1 = bcf_dup(&toDup); }
   bcf1(bcf1_t &&toWrap) { m_bcf1 = &toWrap; }
-  ~bcf1() {
-    if (m_bcf1)
-      bcf_destroy(m_bcf1);
+  ~bcf1() { dealloc(); }
+
+  // move operator
+  void acquire_wrap(bcf1_t &toWrap) {
+    if (&toWrap == m_bcf1)
+      return;
+    dealloc();
+    m_bcf1 = &toWrap;
+    return;
+  }
+  // copy operator
+  void acquire_copy(bcf1_t &toDup) {
+    if (&toDup == m_bcf1)
+      return;
+    dealloc();
+    m_bcf1 = bcf_dup(&toDup);
+    return;
   }
 
   bcf1_t *data() { return m_bcf1; }
 };
+
+//template <> class bcf1<true>;
+//template <> class bcf1<false>;
 
 /*
   The bcf1_extended class extends the bcf1 class with useful accessor functions
   for the bcf1_t struct.
 
 */
-
-class bcf1_extended : public bcf1 {
+template <bool UNIQUE> class bcf1_extended : public bcf1<UNIQUE> {
 
 public:
   // do not allow anyone to change our internal state!
   bcf1_t *data() = delete;
 
   // updates this object with data from the next VCF/BCF line
-  int bcf_read(bcfFile_cpp &fd, const bcf_hdr &h);
+  int bcf_read(bcfFile_cpp &fd, const bcf_hdr_t &h) {
+    return ::bcf_read(fd.data(), &h, this->m_bcf1);
+  }
 
   // returns name of this record's chromosome name
-  std::string chromName(const bcf_hdr &hdr);
+  std::string chromName(const bcf_hdr_t &hdr) {
+    bcf_unpack(this->m_bcf1, BCF_UN_STR);
+    return bcf_hdr_id2name(&hdr, this->m_bcf1->rid);
+  }
 
   // get genomic position in VCF 1-based format
-  unsigned pos1();
+  unsigned pos1() {
+    bcf_unpack(this->m_bcf1, BCF_UN_STR);
+    return this->m_bcf1->pos + 1;
+  }
 
   // returns a copy of alleles, alleles[0] is ref allele, alleles[1] is first
   // alt and so on
-  std::vector<std::string> alleles();
+  std::vector<std::string> alleles() {
+    bcf_unpack(this->m_bcf1, BCF_UN_STR);
+    std::vector<std::string> alls;
+    const unsigned numAlls = this->m_bcf1->n_allele;
+    alls.reserve(numAlls);
+    for (size_t i = 0; i < numAlls; ++i)
+      alls.push_back(this->m_bcf1->d.allele[i]);
+    return alls;
+  }
 
-  bcf_fmt_t *get_fmt(const bcf_hdr &hdr, const std::string &tag);
+  bcf_fmt_t *get_fmt(const bcf_hdr_t &hdr, const std::string &tag) {
+    return ::bcf_get_fmt(&hdr, this->m_bcf1, tag.c_str());
+  }
 
   // returns unique ptr to int32s stored in bcf1
   // unique_ptr frees automatically
   // second element is number of int32s stored in the array
-  std::pair<u_ptr_int32, size_t> get_format_int32(bcf_hdr &hdr,
-                                                  const std::string &tag);
+  std::pair<u_ptr_int32, size_t> get_format_int32(bcf_hdr_t &hdr,
+                                                  const std::string &tag) {
 
-  std::pair<u_ptr_float, size_t> get_format_float(bcf_hdr &hdr,
-                                                  const std::string &tag);
+    if (get_fmt(hdr, tag.c_str())->type != BCF_BT_INT32)
+      throw std::runtime_error(tag + " format field does not contain int32s");
+    int numVals = 0;
+    void *dst = nullptr;
+    int n =
+        bcf_get_format_int32(&hdr, this->m_bcf1, tag.c_str(), &dst, &numVals);
+    if (n <= 0) {
+      throw std::runtime_error("Error parsing tag [" + tag + "]: " +
+                               std::to_string(n));
+    }
+
+    // wrap returned data in smart pointer
+    u_ptr_int32 ret{static_cast<int32_t *>(dst), free};
+    return make_pair(move(ret), n);
+  }
+
+  std::pair<u_ptr_float, size_t> get_format_float(bcf_hdr_t &hdr,
+                                                  const std::string &tag) {
+    if (get_fmt(hdr, tag.c_str())->type != BCF_BT_FLOAT)
+      throw std::runtime_error(tag + " format field does not contain floats");
+    int numVals = 0;
+    void *dst = nullptr;
+    int n =
+        bcf_get_format_float(&hdr, this->m_bcf1, tag.c_str(), &dst, &numVals);
+    if (n <= 0) {
+      throw std::runtime_error("Error parsing tag [" + tag + "]: " +
+                               std::to_string(n));
+    }
+
+    // wrap returned data in smart pointer
+    u_ptr_float ret{static_cast<float *>(dst), free};
+    return make_pair(move(ret), n);
+  }
 
   //  std::vector<float> bcf_get_fmt_float(const bcf_hdr &hdr,
   //                                     const std::string &tag);
 };
+
+//template <> class bcf1_extended<true>;
+//template <> class bcf1_extended<false>;
 
 class bcf_hrec {
 private:
