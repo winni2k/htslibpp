@@ -1,12 +1,8 @@
 htslibpp
 =======
-C++ wrapper for the [htslib](https://github.com/samtools/htslib) C library
+Very limited C++ wrapper for the [htslib](https://github.com/samtools/htslib) C library
 
-This code is still very much in alpha.  Help greatly appreciated.
-
-The goal of this library is to provide wrappers for dynamically
-allocated htslib structs, and an object oriented interface for
-interacting with htslib.
+For a more comprehensive solution, one might want to check out [gamgee](https://github.com/broadinstitute/gamgee).
 
 ## Wrapping htslib structs
 
@@ -52,8 +48,6 @@ function on it.  For example:
 
     assert(myHeader3.data() == hdr);
     
-
-
 
 
 
