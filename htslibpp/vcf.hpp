@@ -74,8 +74,8 @@ public:
   bcf1_t *data() { return m_bcf1; }
 };
 
-//template <> class bcf1<true>;
-//template <> class bcf1<false>;
+// template <> class bcf1<true>;
+// template <> class bcf1<false>;
 
 /*
   The bcf1_extended class extends the bcf1 class with useful accessor functions
@@ -127,7 +127,10 @@ public:
   std::pair<u_ptr_int32, size_t> get_format_int32(bcf_hdr_t &hdr,
                                                   const std::string &tag) {
 
-    if (get_fmt(hdr, tag.c_str())->type != BCF_BT_INT32)
+    bcf_fmt_t *format = get_fmt(hdr, tag.c_str());
+    if (!format)
+      throw std::runtime_error(tag + " format field does not exist in BCF");
+    if (format->type != BCF_BT_INT32)
       throw std::runtime_error(tag + " format field does not contain int32s");
     int numVals = 0;
     void *dst = nullptr;
@@ -145,7 +148,10 @@ public:
 
   std::pair<u_ptr_float, size_t> get_format_float(bcf_hdr_t &hdr,
                                                   const std::string &tag) {
-    if (get_fmt(hdr, tag.c_str())->type != BCF_BT_FLOAT)
+    bcf_fmt_t *format = get_fmt(hdr, tag.c_str());
+    if (!format)
+      throw std::runtime_error(tag + " format field does not exist in BCF");
+    if (format->type != BCF_BT_FLOAT)
       throw std::runtime_error(tag + " format field does not contain floats");
     int numVals = 0;
     void *dst = nullptr;
@@ -165,8 +171,8 @@ public:
   //                                     const std::string &tag);
 };
 
-//template <> class bcf1_extended<true>;
-//template <> class bcf1_extended<false>;
+// template <> class bcf1_extended<true>;
+// template <> class bcf1_extended<false>;
 
 class bcf_hrec {
 private:
