@@ -25,6 +25,7 @@ public:
   bcf_srs_t *data() { return m_sr; }
 
   void add_reader(const std::string &filename) {
+    m_sr->require_index = tbx_index_load(filename.c_str());
     if (bcf_sr_add_reader(m_sr, filename.c_str()) != 1)
       throw std::runtime_error("Error while adding file: [" + filename + "]");
     ++m_nFiles;
@@ -43,6 +44,7 @@ public:
     if (m_nFiles == 0)
       throw std::runtime_error("Synced reader is empty.  It does not make "
                                "sense to ask if any readers are indexed.");
+    assert(fileNum < m_nFiles);
     auto &reader = m_sr->readers[fileNum];
     return (reader.tbx_idx != nullptr || reader.bcf_idx != nullptr);
   }
