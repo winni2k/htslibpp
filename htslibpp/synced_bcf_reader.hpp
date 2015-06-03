@@ -25,7 +25,7 @@ public:
   bcf_srs_t *data() { return m_sr; }
 
   void add_reader(const std::string &filename) {
-    m_sr->require_index = tbx_index_load(filename.c_str()) == nullptr;
+    m_sr->require_index = tbx_index_load(filename.c_str()) != nullptr;
     if (bcf_sr_add_reader(m_sr, filename.c_str()) != 1)
       throw std::runtime_error("Error while adding file: [" + filename + "]");
     ++m_nFiles;
