@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include <htslib/vcf.h>
@@ -121,19 +122,37 @@ public:
     return ::bcf_get_fmt(&hdr, this->m_bcf1, tag.c_str());
   }
 
-  // returns unique ptr to int32s stored in bcf1
+  // returns unique ptr to ints stored in bcf1
   // unique_ptr frees automatically
-  // second element is number of int32s stored in the array
-  std::pair<u_ptr_int32, size_t> get_format_int32(bcf_hdr_t &hdr,
-                                                  const std::string &tag) {
+  // second element is number of ints stored in the array
+  template <typename INT_T>
+  std::pair<std::unique_ptr<INT_T, decltype(free) *>, size_t>
+  get_format_int(bcf_hdr_t &hdr, const std::string &tag) {
 
     bcf_fmt_t *format = get_fmt(hdr, tag.c_str());
-    if (!format)
-      throw std::runtime_error(tag + " format field does not exist in BCF");
-    if (format->type != BCF_BT_INT32)
-      throw std::runtime_error(tag + " format field does not contain int32s");
     int numVals = 0;
     void *dst = nullptr;
+    if (!format)
+      throw std::runtime_error(tag + " format field does not exist in BCF");
+
+    // check to make sure types match
+    switch (format->type) {
+    case BCF_BT_INT32:
+      if (!std::is_same<INT_T, int32_t>::value)
+        throw std::runtime_error(tag + " format field does not contain int32s");
+      break;
+    case BCF_BT_INT16:
+      if (!std::is_same<INT_T, int16_t>::value)
+        throw std::runtime_error(tag + " format field does not contain int16s");
+      break;
+    case BCF_BT_INT8:
+      if (!std::is_same<INT_T, int8_t>::value)
+        throw std::runtime_error(tag + " format field does not contain int8s");
+      break;
+    default:
+      throw std::runtime_error(tag + " format field does not contain integers");
+    }
+
     int n =
         bcf_get_format_int32(&hdr, this->m_bcf1, tag.c_str(), &dst, &numVals);
     if (n <= 0) {
@@ -142,7 +161,8 @@ public:
     }
 
     // wrap returned data in smart pointer
-    u_ptr_int32 ret{static_cast<int32_t *>(dst), free};
+    std::unique_ptr<INT_T, decltype(free) *> ret{static_cast<INT_T *>(dst),
+                                                 free};
     return make_pair(move(ret), n);
   }
 
